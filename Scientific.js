@@ -17,7 +17,6 @@ const getQuotes = async () => {
     // Open a new page
     const page = await browser.newPage();
 
-    // await page.setDefaultNavigationTimeout(0)
     await page.goto("https://www.scientificamerican.com/section/latest-technology-stories/", { waitUntil: "load", timeout: 0 });
 
     let results = [];
@@ -36,13 +35,15 @@ const getQuotes = async () => {
         await page.goto(results[i].url, { waitUntil: "load", timeout: 0 });
         const article = await getArticles(page);
 
-        const insertData = {
-            date: results[i].date,
-            title: results[i].title,
-            articles: article.article,
-            url: results[i].url
+        if (article.article != '' && article.date != '') {
+            const insertData = {
+                date: article.date,
+                title: results[i].title,
+                articles: article.article,
+                url: results[i].url
+            }
+            data.push(insertData)
         }
-        data.push(insertData)
     }
 
     // Close the browser
@@ -59,9 +60,8 @@ async function extractedEvaluateCall(page) {
         return Array.from(quoteList).map((quote) => {
             const url = quote.querySelector("a").href;
             const title = quote.querySelector("a div.listing-wide__inner h2.t_listing-title").innerText;
-            const date = quote.querySelector("a div.listing-wide__inner div.t_meta").innerText;
 
-            return { url, title, date };
+            return { url, title };
         });
     });
 
@@ -79,7 +79,15 @@ async function getArticles(page) {
 
     }
 
-    return { article }
+    let date = '';
+
+    try {
+        date = await page.$eval("time[itemprop='datePublished']", el => el.innerText);
+    } catch (e) {
+
+    }
+
+    return { article, date }
 }
 
 // Start the scraping
